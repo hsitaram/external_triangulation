@@ -269,7 +269,7 @@ bool polygon::ispointinside(double px,double py)
 	outsidep_y = allpoints[1] + l_dash*(allpoints[1]-cent_y)/length;
 
 
-	std::cout<<"seed point:"<<outsidep_x<<"\t"<<outsidep_y<<"\n";
+	//std::cout<<"seed point:"<<outsidep_x<<"\t"<<outsidep_y<<"\n";
 	e.setedgeparams(px,py,outsidep_x,outsidep_y);
 	
 

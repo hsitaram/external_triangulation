@@ -1,7 +1,10 @@
 SOURCEDIR=../source
-OBJFILES=${SOURCEDIR}/edge.o ${SOURCEDIR}/common.o ${SOURCEDIR}/polygon.o ${SOURCEDIR}/triangle.o ${SOURCEDIR}/triangulation.o
-OFILES=edge.o common.o polygon.o triangle.o triangulation.o
-CXXFLAGS=-O2 -g -W -pedantic -Wall
+OBJFILES=${SOURCEDIR}/edge.o ${SOURCEDIR}/common.o ${SOURCEDIR}/polygon.o\
+	 ${SOURCEDIR}/triangle.o ${SOURCEDIR}/triangulation.o ${SOURCEDIR}/trielement.o\
+	 ${SOURCEDIR}/laplace_solver.o
+OFILES=edge.o common.o polygon.o triangle.o triangulation.o trielement.o\
+      laplace_solver.o
+CXXFLAGS=-g -W -pedantic -Wall
 
 dlny:	${OBJFILES}
 	mv ${SOURCEDIR}/*.o .

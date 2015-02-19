@@ -1,17 +1,14 @@
 #include"triangle.h"
 #include"polygon.h"
 #include<algorithm>
-
+#ifndef TRIANGULATION_H
+#define TRIANGULATION_H
 class triangulation
 {
-	int numnodes;
 	int numpoly;
 	double xmin_d,ymin_d,xmax_d,ymax_d;
-	std::vector<double> nodes;
 	std::vector<edge> edgelist;
-	std::vector<triangle> trianglelist;
 	polygon *polydomain;
-	std::vector<int> boundarynodeids;
 	
 	bool performflips();
 	bool isedgepresent(edge e,int &pos);
@@ -36,7 +33,14 @@ class triangulation
 	
 	public:
 
-        void setpolydomain(polygon *p,int npoly)
+	std::vector<double> nodes;
+	std::vector<triangle> trianglelist;
+	std::vector<int> boundarynodeids;
+	std::vector<int> bodynodeids;
+	int numnodes;
+	double domain_mid_x,domain_mid_y;
+        
+	void setpolydomain(polygon *p,int npoly)
 	{
 		polydomain = new polygon[npoly];
 
@@ -57,6 +61,7 @@ class triangulation
 	
 	void printtridata();
 	void printtrianglesgnuplot();
-	void printtrianglesvtu();
+	void printtrianglesvtu(double *pointdata);
 
 };
+#endif

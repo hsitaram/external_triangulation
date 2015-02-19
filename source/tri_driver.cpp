@@ -1,5 +1,6 @@
 #include"polygon.h"
 #include"triangulation.h"
+#include"laplace_solver.h"
 #include<cstdlib>
 
 int main(int argc,char *argv[])
@@ -7,18 +8,19 @@ int main(int argc,char *argv[])
 	int n,npoly;
 	double *p;
 	polygon *pgons;
-	triangulation triobj;
 	std::string polyfname;
 	char num[20];
 	std::string strnum;
 	double minlength;
 	double globalavglength;
 
+	triangulation *triobj;
+	laplace_solver *solverobj;
+
+
 	std::ifstream infile;
 	infile.open("polypoints.inp");
-
 	infile>>npoly;
-
 	pgons = new polygon[npoly];
 	globalavglength = 0.0;
 
@@ -41,20 +43,21 @@ int main(int argc,char *argv[])
 
 		delete(p);
 	}
-
 	infile.close();
 	globalavglength = globalavglength/double(npoly);
 
-	triobj.setpolydomain(pgons,npoly);
+	triobj=new triangulation;
+	triobj->setpolydomain(pgons,npoly);
 	std::cout<<"set poly domain\n";
-	triobj.generate_external_triangulation();
-	triobj.centroidinsert(globalavglength);
-	//triobj.bwalgorithm(pgon.minlength);
-	//triobj.uniformly_distribute_points(30,30);
+	triobj->generate_external_triangulation();
+	triobj->centroidinsert(globalavglength*2);
+	triobj->printtrianglesgnuplot();
+	triobj->printtridata();
 
-	//triobj.printtridata();
-	triobj.printtrianglesgnuplot();
-	triobj.printtrianglesvtu();
+	solverobj=new laplace_solver;
+	solverobj->assignelements(triobj,2.0,0.0);
+	solverobj->solve();
+	//triobj.printtrianglesvtu();
 
 	return(0);
 }

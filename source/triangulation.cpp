@@ -136,7 +136,8 @@ void triangulation::centroidinsert(double minsidelen)
 		}
 		std::cout<<"avg and min side length:"<<avgsidelen<<"\t"<<minsidelen<<"\n";
 	}
-	for(int i=0;i<10;i++)
+	std::cout<<"Laplacian smoothing points\n";
+	for(int i=0;i<3;i++)
 	{
 		laplace_smooth();
 		for(it=0;it<itmax;it++)
@@ -336,7 +337,7 @@ bool triangulation::performflips()
 
 }
 //=======================================================================================
-void triangulation::printtrianglesvtu()
+void triangulation::printtrianglesvtu(double *pointdata)
 {
 	char underscore;
 	int offset;
@@ -357,11 +358,11 @@ void triangulation::printtrianglesvtu()
 	outfile<<"<UnstructuredGrid>\n";
 	outfile<<"<Piece NumberOfPoints=\""<<numnodes<<"\" NumberOfCells=\""<<trianglelist.size()<<"\">\n";
 
-	outfile<<"<CellData>\n";
-	outfile<<"<DataArray type=\"Float64\" Name=\"circumrad\" format=\"appended\" offset=\""<<offset<<"\"/>\n";
-	outfile<<"</CellData>\n";
+	outfile<<"<PointData>\n";
+	outfile<<"<DataArray type=\"Float64\" Name=\"psi\" format=\"appended\" offset=\""<<offset<<"\"/>\n";
+	outfile<<"</PointData>\n";
 
-	offset = offset + sizeof(int) + sizeof(double)*trianglelist.size();
+	offset = offset + sizeof(int) + sizeof(double)*numnodes;
 	outfile<<"<Points>\n";
 	outfile<<"<DataArray name=\"Position\" type=\"Float64\" ";
 	outfile<<"NumberOfComponents=\"3\" format=\"appended\" offset=\""<<offset<<"\"/>\n";
@@ -385,11 +386,11 @@ void triangulation::printtrianglesvtu()
 
 	outfile.write(&underscore,sizeof(char));
 
-	intval=sizeof(double)*trianglelist.size();
+	intval=sizeof(double)*numnodes;
 	outfile.write((char *)&intval,sizeof(int));
-	for(unsigned int i=0;i<trianglelist.size();i++)
+	for(int i=0;i<numnodes;i++)
 	{
-		outfile.write((char *)&trianglelist[i].circrad,sizeof(double));	
+		outfile.write((char *)&pointdata[i],sizeof(double));	
 	}
 
 	intval=3*sizeof(double)*numnodes;
@@ -638,23 +639,23 @@ void triangulation::generate_external_triangulation()
 	int itmax,it;
 	bool flipflag;
 	double minlen,avglen;
+	double maxpolysize_x,maxpolysize_y;
 
 	xmax = -INFTY; 			   ymax = -INFTY;
 	xmin =  INFTY;	 		   ymin =  INFTY;
-	factor = 2.0;
+	factor = 2.5;
 	minlen = INFTY;
 	avglen = 0.0;
-	
-	std::cout<<xmax<<"\t"<<xmin<<"\t"<<ymax<<"\t"<<ymin<<"\n";
+
+	maxpolysize_x = -INFTY;
+	maxpolysize_y = -INFTY;
+
+	boundarynodeids.resize(0);
+	bodynodeids.resize(0);
 
 	for(int pnum=0;pnum<numpoly;pnum++)
 	{
-		std::cout<<"pnum:"<<pnum<<"\tnumpoly:"<<numpoly<<"\n";
-
 		ninteriorpolynodes=polydomain[pnum].allpoints.size()/2;
-
-		std::cout<<xmax<<"\t"<<xmin<<"\t"<<ymax<<"\t"<<ymin<<"\n";
-
 
 		for(int i=0;i<ninteriorpolynodes;i++)
 		{
@@ -666,7 +667,6 @@ void triangulation::generate_external_triangulation()
 			{
 				xmin = polydomain[pnum].allpoints[DIM*i];
 			}
-
 			if(polydomain[pnum].allpoints[DIM*i+1] > ymax)
 			{
 				ymax = polydomain[pnum].allpoints[DIM*i+1];
@@ -677,6 +677,14 @@ void triangulation::generate_external_triangulation()
 			}
 		}
 
+		if((xmax-xmin) > maxpolysize_x)
+		{
+			maxpolysize_x=xmax-xmin;
+		}
+		if((ymax-ymin) > maxpolysize_y)
+		{
+			maxpolysize_y = ymax-ymin;
+		}
 		if(polydomain[pnum].minlength < minlen)
 		{
 			minlen = polydomain[pnum].minlength;
@@ -687,21 +695,17 @@ void triangulation::generate_external_triangulation()
 
 	avglen = avglen/double(numpoly);
 
-	midx = 0.5*(xmax+xmin);	midy = 0.5*(ymax+ymin);
-	lx   =     (xmax-xmin);	ly   =     (ymax-ymin);
+	midx = 0.5*(xmax+xmin);		midy = 0.5*(ymax+ymin);
+	lx   = factor*(xmax-xmin);	ly   = factor*(ymax-ymin);
 
-	xmin_d = midx - 0.5*factor*lx;	ymin_d = midy - 0.5*factor*ly;
-	xmax_d = midx + 0.5*factor*lx;	ymax_d = midy + 0.5*factor*ly;
-	
-	//np_rect_x = floor(lx/minlen);
-	//np_rect_y = floor(ly/minlen);
-	np_rect_x = floor(lx/avglen);
-	np_rect_y = floor(ly/avglen);
-	
-	std::cout<<xmax<<"\t"<<xmin<<"\t"<<ymax<<"\t"<<ymin<<"\n";
-	std::cout<<midx<<"\t"<<midy<<"\t"<<lx<<"\t"<<ly<<"\n";
-	std::cout<<"np_rect:"<<np_rect_x<<"\t"<<np_rect_y<<"\n";
+	//public variables
+	domain_mid_x = midx; 		domain_mid_y = midy;
 
+	xmin_d = midx - 0.5*lx;	ymin_d = midy - 0.5*ly;
+	xmax_d = midx + 0.5*lx;	ymax_d = midy + 0.5*ly;
+	
+	np_rect_x = (floor(lx/avglen)>1)?floor(lx/avglen):2;
+	np_rect_y = (floor(ly/avglen)>1)?floor(ly/avglen):2;
 	
 	np_rect_total = (np_rect_x-1)+(np_rect_y-1)+(np_rect_x-1)+(np_rect_y-1);
 	p = new double[DIM*np_rect_total];
@@ -776,7 +780,7 @@ void triangulation::generate_external_triangulation()
 
 		for(int i=0;i<ninteriorpolynodes;i++)
 		{
-			boundarynodeids.push_back(offset+i);
+			bodynodeids.push_back(offset+i);
 		}
 		offset += ninteriorpolynodes;
 
@@ -834,11 +838,11 @@ void triangulation::insert_points_to_triangulation(std::vector<double> points,in
 		}
 
 
-		std::cout<<"px:"<<px<<"py:"<<py<<"\n";
-		std::cout<<"tid:"<<tid<<"\n";
+		//std::cout<<"px:"<<px<<"py:"<<py<<"\n";
+		//std::cout<<"tid:"<<tid<<"\n";
 	}
 
-	std::cout<<"missed points\n";
+	//std::cout<<"missed points\n";
 	for(unsigned int i=0;i<missedpoints.size();i++)
 	{
 		reordertriedges();
@@ -872,8 +876,8 @@ void triangulation::insert_points_to_triangulation(std::vector<double> points,in
 			}
 		}
 		
-		std::cout<<"px:"<<px<<"py:"<<py<<"\n";
-		std::cout<<"tid:"<<tid<<"\n";
+		//std::cout<<"px:"<<px<<"py:"<<py<<"\n";
+		//std::cout<<"tid:"<<tid<<"\n";
 		
 	}
 
@@ -910,7 +914,8 @@ void triangulation::laplace_smooth()
 	double newx,newy;
 	int pids[3],p1,p2,p3;
 
-	nbnodes=boundarynodeids.size();
+	nbnodes = boundarynodeids.size();
+	nbnodes = nbnodes+bodynodeids.size();
 
 	for(int i=nbnodes;i<numnodes;i++)
 	{
